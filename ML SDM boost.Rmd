@@ -1,0 +1,81 @@
+---
+title: "ML SDM boost"
+author: "Akano Hammed A"
+date: "9/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+mod.fit2 = train(pb~.,data = training,
+                 trControl = train_control,
+                 method = "gbm")
+summary(mod.fit2)
+
+
+```
+```{r}
+varImp(mod.fit2)
+```
+```{r}
+p1 = predict(mod.fit2, newdata = testing)
+library(pROC)
+roc = pROC::roc(testing[,"pb"], p1)
+auc = pROC::auc(roc)
+auc
+plot(roc)
+text(0.5,0.5,paste("AUC = ", format(auc,
+                                    digits = 3,
+                                    scientific = F)))
+```
+```{r}
+p4 = predict(stck, mod.fit2)
+plot(p4, main = "GBM Predictive Map")
+```
+```{r}
+library(gbm)
+require(gbm)
+
+boost = gbm(pb~., data = training,
+            distribution = "gaussian",
+            n.trees = 5000,
+            interaction.depth = 4)
+summary(boost)
+
+plot(boost, i = "slope")
+plot(boost, i = "altitude")
+plot(boost, i = "preciptn")
+plot(boost, i = "roughness1")
+plot(boost, i = "tempMin")
+plot(boost, i = "tempAvg")
+```
+```{r}
+library(ModelMetrics)
+attach(testing)
+auc(testing$pb, p1)
+confusionMatrix(testing$pb, p1, cutoff = 0.5)
+overall = (31+212)/(31+0+2+212)
+overall
+
+logLoss(testing$pb, p1, distribution = "binomial")
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

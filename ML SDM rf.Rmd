@@ -1,0 +1,117 @@
+---
+title: "ML SDM rf"
+author: "Akano Hammed A"
+date: "9/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+pa = read.csv("Pres_abs.csv")
+head(pa)
+summary(pa)
+attach(pa)
+
+pb = as.factor(pb)
+head(pa)
+```
+```{r}
+library(caret)
+# Split data into training and testing set
+set.seed(1)
+trainIndex = createDataPartition(pb, p = 0.75,
+                                 list = F,
+                                 times = 1)
+training = pa[trainIndex, ]
+testing = pa[-trainIndex, ]
+
+# head(testing)
+set.seed(825)
+
+#train the model with predictors for prediction
+train_control = trainControl(method = "cv", 
+                             number = 10)
+mod.fit = train(pb~., data = training,
+                trControl = train_control,
+                method = "rf", importance = T)
+summary(mod.fit)
+
+```
+
+
+```{r}
+# Check for predictors importance to our prediction
+varImp(mod.fit)
+```
+```{r}
+# Predict on the test data
+p1 = predict(mod.fit, newdata = testing)
+
+# Test model fit-auc
+library(pROC)
+# Compare the testing data with predicted responses
+roc = pROC::roc(testing[,"pb"], p1) 
+
+auc = pROC::auc(roc)
+auc
+plot(roc)
+text(0.5, 0.5, paste("AUC =", format(auc,
+                                     digits = 3,
+                                     scientific = F)))
+```
+```{r}
+# build the SDM
+## Load the require raster data
+require(raster)
+datafiles = Sys.glob("*.tif")
+stck = stack()
+for (i in 1:NROW(datafiles)) {
+  tempraster = raster(datafiles[i])
+  stck = stack(stck, tempraster)
+  
+}
+
+## Use predict to implement the model in mod.fit on the raster stack of our predictors
+p = predict(stck, mod.fit)
+plot(p, main = "RF Predictive Map")
+```
+```{r}
+# Test the impact of individual predictors
+require(randomForest) #randomforest package
+# Build model with training set| predict with it
+m1 = randomForest(pb~., data = training)
+#class(m1)
+
+# Predictors Partial Dependence in predicting habitat suitability for the species
+partialPlot(m1, training, preciptn, pb)
+#rf model, training set, raster[X], Y/response variable
+
+# Use predict to implement the RF model stack in mod.fit on the raster stack of our predictors
+p2 = predict(stck, m1)
+plot(p2, main = "RF Predictive Map")
+
+
+# Build model with all data set| predict with it
+m2 = randomForest(pb~., data = pa)
+p3 = predict(stck, m2)
+plot(p3, main = "RF Predictive Map-All")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

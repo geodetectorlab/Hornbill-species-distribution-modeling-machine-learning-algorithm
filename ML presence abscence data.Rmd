@@ -1,0 +1,86 @@
+---
+title: "ML pre-procc"
+author: "Akano Hammed A"
+date: "9/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+```
+
+
+```{r cars}
+datafiles = Sys.glob("*.tif")
+datafiles
+stck = stack()
+for (i in 1:NROW(datafiles)) {
+  tempraster = raster(datafiles[i])
+  stck = stack(stck, tempraster)
+}
+stck
+plot(stck, 4)
+```
+
+
+```{r cars}
+### presence data
+horn1
+plot(stck, 4)
+points(horn1, col = "green")
+prs1 = extract(stck, horn1)
+
+set.seed(1)
+
+backgr = randomPoints(stck, n = 500) #random points
+absvals = extract(stck, backgr) # choose absence values from the background
+
+pb = c(rep(1, nrow(prs1)), rep(0, nrow(absvals)))
+sdmdata = data.frame(cbind(pb, rbind(prs1, absvals)))
+
+head(sdmdata)
+
+sdmdata = na.omit(sdmdata)
+summary(sdmdata)
+
+tail(sdmdata)
+
+#write.csv(sdmdata, "pres_abs.csv")
+
+
+```
+```{r}
+library(raster)
+#plot(stck, 3)
+#drawExtent()
+
+
+abs = crop(stck,e)
+plot(abs)
+backgr = randomPoints(abs, 135) #80-20 ratio
+
+absvals = extract(abs, backgr)
+pb = c(rep(1, nrow(prs1)), rep(0, nrow(absvals)))
+sdmdata = data.frame(cbind(pb, rbind(prs1, absvals)))
+head(sdmdata)
+write.csv(sdmdata, "pres_abs.csv")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

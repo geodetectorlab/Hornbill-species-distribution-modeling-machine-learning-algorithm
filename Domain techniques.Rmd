@@ -1,0 +1,106 @@
+---
+title: "SDM domain"
+author: "Akano Hammed"
+date: "9/26/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r}
+library(sp)
+library(raster)
+library(dismo)
+library(maptools)
+```
+
+
+```{r}
+datafiles = Sys.glob("*.tif") 
+datafiles
+resultingStack = stack()
+for(i in 1:NROW(datafiles)){
+  tempraster = raster(datafiles[i])
+  stck = stack(stck, tempraster)
+}
+
+stck
+
+plot(stck)
+```
+
+
+```{r}
+## presence data
+horn1
+head(horn1)
+# fisrts column not needed
+
+ext = extent(99, 105, 1.2, 6.7)
+plot(stck, 3)
+points(horn1, col = "blue")
+
+group = kfold(horn1, 5)
+pres_train = horn1[group != 1, ]
+pres_test = horn1[group == 1, ]
+
+
+backg = randomPoints(stck, n=1000, ext = ext, extf = 1.25)
+colnames(backg) = c("lon", "lat")
+group = kfold(backg, 5)
+
+backg_train = backg[group != 1, ]
+backg_test = backg[group == 1, ]
+
+r = raster(stck, 1)
+plot(!is.na(r), col = c("white", "light grey"), legend = F)
+plot(ext, add=T, col = "red", lwd = 2)
+points(backg_train, pch = "-", cex = 0.5, col = "yellow")
+points(backg_test, pch = "-", cex = 0.5, col = "black")
+points(pres_train, pch = "+", col = "green")
+points(pres_test, pch = "+", col = "blue")
+```
+
+
+```{r}
+require(dismo)
+dm = domain(stck, pres_train) #domain model presence data only
+e = evaluate(pres_test, backg_test, dm, stck)
+```
+
+
+```{r}
+## predictive mapping
+pd = predict(stck, dm, ext = ext, progress = "") #predict for p mapping
+#par(mfrow=c(1,2))
+plot(pd, main = "DOmain, raw values")
+
+
+
+
+```
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

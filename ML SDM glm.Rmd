@@ -1,0 +1,125 @@
+---
+title: "SDM glm"
+author: "Akano Hammed A"
+username : "Geodetector"
+Lab: "geodetectorlab"
+date: "9/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(caret)
+pa = read.csv("pres_abs.csv")
+pa = na.omit(pa)
+summary(pa)
+pa
+write.csv(pa, "pres_abs.csv")
+```
+
+```{r cars}
+
+```
+
+``` {.{.{.{.{.{.{.{.{set.seed(1)}}}}}}}}}
+trainIndex = createDataPartition(pa$pb, p = 0.75,
+                                 list = F,
+                                 times = 1) # y as basisi of splitting
+training = pa[ trainIndex, ] # 75% of the data
+testing = pa[-trainIndex, ] # 25% of the data
+
+set.seed(825)
+
+dim(training)
+dim(testing)
+```
+
+```{r cars}
+attach(training)
+pb = as.factor(training$pb) # 1stands for presence and 0 for absence
+m1 = glm(pb ~., data = training) #base package
+class(m1)
+summary(m1)
+
+```
+
+```{r cars}
+## caret
+# define training control --> 10fold cv
+train_control = trainControl(method = "cv", number = 10)
+ 
+
+mod_fit=train(pb~.,data=training,trControl=train_control,method="glm",family="binomial")
+summary(mod_fit)
+ 
+```
+
+```{r cars}
+## importance of the different predictors
+varImp(mod_fit) #caret
+```
+
+```{r cars}
+## test the model 
+p1 = predict(mod_fit, newdata = testing) # predict on the test data
+
+# predicted presence and absence
+p2 = predict(mod_fit, newdata = testing, type = "raw")
+```
+
+```{r}
+#test model fit-auc
+library(pROC)
+roc.glmModel = pROC::roc(testing[,"pb"], p1) # compare testing data with predicted responses
+```
+
+```{r}
+auc = pROC::auc(roc.glmModel)
+auc
+plot(roc.glmModel)
+text(0.5, 0.5, paste("AUC = ", format(auc, digits = 5, 
+                                      scientific = F)))
+```
+
+```{r}
+## build an SDM
+## read in all predictors since they are all significant
+require(raster)
+datafiles = Sys.glob("*.tif")
+stck = stack()
+for (i in 1:NROW(datafiles))  {
+  tempraster = raster(datafiles[i])
+  stck = stack(stck, tempraster)
+}
+```
+
+```{r}
+names(stck)
+```
+
+```{r}
+#stck
+#mod_fit
+p1 = predict(stck, mod_fit) #use predict to implement the GLM model stored
+#in mod_fit on the raster stack of our predictors
+plot(p1,main="GLM Predictive Map")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

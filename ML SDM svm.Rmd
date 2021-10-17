@@ -1,0 +1,115 @@
+---
+title: "SVM"
+author: "Akano Hammed A"
+date: "9/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+pa = read.csv("pres_abs.csv")
+pa = na.omit(pa)
+head(pa)
+attach(pa)
+
+```
+
+```{r}
+library(caret)
+set.seed(1)
+trainIndex = createDataPartition(pb, p = .75,
+                                 list = F, times = 1)
+training = pa[trainIndex, ] #75% of the data for model training
+
+testing = pa[-trainIndex, ] #25% of the data for testing set
+
+head(training)
+dim(training)
+length(training)
+```
+
+```{r}
+## caret 
+# define training control --> 10 foldcv
+train_control = trainControl(method = "cv", number = 10)
+
+#fit the model
+mod_fit1=train(pb~altitude+aspect1+preciptn+roughness1+slope+tempAvg+tempMin,
+               data=training,trControl=train_control,method="svmRadial")
+
+summary(mod_fit1)
+```
+
+```{r}
+# importance of the different predictors
+varImp(mod_fit1)
+```
+
+```{r}
+# test the model 
+p1 = predict(mod_fit1, newdata = testing)
+
+# test the model fit-auc
+library(pROC)
+roc.svmModel = pROC::roc(testing[,"pb"],p1) # compare testing data with predicted responses
+
+auc = pROC::auc(roc)
+auc
+
+
+
+plot(roc.svmModel)
+text(0.5, 0.5, paste("AUC =", format(auc, digits = 3,
+                                     scientific = F)))
+```
+
+```{r}
+# read in all predictors
+datafiles = Sys.glob("*.tif") # or whatever identifes your files
+
+stck = stack() # empty raster stack for storing raster layers
+
+for (i in 1:NROW(datafiles)) {
+  tempraster = raster(datafiles[i])
+  stck = stack(stck, tempraster)
+}
+stck
+plot(stck, 7)
+```
+
+```{r}
+p1 = predict(stck, mod_fit1) # use predict to implement the SVM model stored in mod_fit on the raster stack of our predictors
+
+plot(p1, main = " SVM [rbf kernel] Predictive Map")
+```
+```{r}
+s = dropLayer(stck, 3)
+s
+mod_fit2 = train(pb~altitude+aspect1+roughness1+slope+tempAvg+tempMin, data = training, 
+                 trcontrol = train_control,
+                 method = "svmPoly")
+summary(mod_fit2)
+```
+```{r}
+p2 = predict(s, mod_fit2)
+plot(p2, main = "svm [polynomial kernel] Predictive Map")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
